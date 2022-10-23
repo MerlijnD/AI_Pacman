@@ -3,6 +3,7 @@
 # Om de file te runnen kan de de volgende command gebruiken:
 # python .\capture.py -r baselineTeam -b Da_V@_Slayers
 
+from msilib.schema import Environment
 from sre_parse import State
 from captureAgents import CaptureAgent
 import random, time, util
@@ -76,7 +77,7 @@ class ChonkyBoy(CaptureAgent):
       return random.choice(Possible_Actions)
     
     else:
-      print(self.computeActionFromQValues(gameState))
+      # print(self.computeActionFromQValues(gameState))
       return self.computeActionFromQValues(gameState)
 
   def getQValue(self, state, action):
@@ -164,6 +165,10 @@ class ChonkyBoy(CaptureAgent):
       - Enemy spawn location?
     """
     
+    Environment = util.Counter()
+    
+
+        
     # Welke teamkleur zijn we:
     My_Team_Color = gameState.isOnRedTeam(self.index)
     if (My_Team_Color == True): print("We zijn team Rood!")
@@ -175,4 +180,4 @@ class ChonkyBoy(CaptureAgent):
     # Krijg de locatie van de power capsules, doen we nu niks mee
     grid = gameState.getCapsules()  
     
-    return env    
+    return env
