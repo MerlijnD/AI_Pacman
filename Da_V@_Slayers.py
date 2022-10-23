@@ -5,6 +5,8 @@
 
 from msilib.schema import Environment
 from sre_parse import State
+import string
+from tkinter import Y
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
@@ -46,8 +48,10 @@ class ChonkyBoy(CaptureAgent):
     self.observationHistory = []
     self.QValue = util.Counter()
     
+    # Welke teamkleur zijn we:
+    My_Team_Color = gameState.isOnRedTeam(self.index)
+    
     env = self.getEnvironment(gameState)
-    print(env)
     CaptureAgent.registerInitialState(self, gameState)
 
   # NOTE: Dit wordt herhaald gerunned, nu zijn beide agents deze class
@@ -157,27 +161,45 @@ class ChonkyBoy(CaptureAgent):
 
   def getEnvironment(self, gameState):
     """
-      Het liefst willen we een environment terug geven met alles erin, dus:
-      - Muren
-      - Power capsuls
-      - Food
-      - Spawn location?
-      - Enemy spawn location?
+      Returned 2D-numpy array (datatype: str) met alle belangrijke init environment info:
+        - Walls         = 'W'
+        - Food          = 'F'
+        - powercapsule  = 'P'
+        - Empty space   = '_'
     """
     
-    Environment = util.Counter()
+    # Krijg de locatie van de walls en stops ze in de array
+    env = gameState.getWalls()
+    cop_env = []
+    for r in env:       # Voor elke row in env
+      cop_env.append(r)
+    np_env = np.array(cop_env).astype(str)
+    
+    # Intereer over de np array en verrander de values
+    np_env[np_env == "True"] = "W"
+    np_env[np_env == "False"] = "_"
     
 
-        
-    # Welke teamkleur zijn we:
-    My_Team_Color = gameState.isOnRedTeam(self.index)
-    if (My_Team_Color == True): print("We zijn team Rood!")
-    if (My_Team_Color == False): print("We zijn team Blauw!!!")
+    # Krijg de locatie van de power capsules, en voeg toe aan np_env
+    caps = gameState.getCapsules()  
+    for r in caps:
+      np_env[r[0]][r[1]] = "P"
     
-    # Krijg de locatie van de walls
-    env = gameState.getWalls()      
+    # Krijg de locatie van alle food
+    x_food = 0
+    y_food = 0
+    for r in np_env:
+      for p in r:
+        if (gameState.hasFood(x_food, y_food) == 1):
+          np_env[x_food][y_food] = "F"
+        x_food = x_food + 1
+        if (x_food == np_env.shape[0]):
+          x_food = 0
+          y_food = y_food + 1
+      if (y_food == np_env.shape[1]):
+        y_food = 0
     
-    # Krijg de locatie van de power capsules, doen we nu niks mee
-    grid = gameState.getCapsules()  
+    # Je kan deze print aanzetten voor debugging / check hoe de env er uit ziet.
+    # print(np_env)
     
-    return env
+    return np_env
