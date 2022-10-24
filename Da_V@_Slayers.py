@@ -51,7 +51,8 @@ class ChonkyBoy(CaptureAgent):
     # Welke teamkleur zijn we:
     My_Team_Color = gameState.isOnRedTeam(self.index)
     
-    env = self.getEnvironment(gameState)
+    self.env = self.getEnvironment(gameState)
+    
     CaptureAgent.registerInitialState(self, gameState)
 
   # NOTE: Dit wordt herhaald gerunned, nu zijn beide agents deze class
@@ -64,13 +65,14 @@ class ChonkyBoy(CaptureAgent):
       of pac-man is gegeten (als ghost zijnde)
       Of General Gamestates zoals in het midden van het veld zich bevinden
     """
-    
-    
+
     """
       Krijg de state van le ChonkyBoy 
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
+    new_env = self.UpdateEnvironment(gameState, self.env)
+    # print(new_env)
     Possible_Actions = gameState.getLegalActions(self.index)
     """
     Voorspel de beste Actie die daarna gegeven kan worden.
@@ -166,6 +168,7 @@ class ChonkyBoy(CaptureAgent):
         - Food          = 'F'
         - powercapsule  = 'P'
         - Empty space   = '_'
+        - Agent         = 'A'
     """
     
     # Krijg de locatie van de walls en stops ze in de array
@@ -199,7 +202,19 @@ class ChonkyBoy(CaptureAgent):
       if (y_food == np_env.shape[1]):
         y_food = 0
     
+    pos = gameState.getAgentPosition(self.index)
+    np_env[pos[0]][pos[1]] = "A"
+    
     # Je kan deze print aanzetten voor debugging / check hoe de env er uit ziet.
     # print(np_env)
+    
+    return np_env
+  
+  def UpdateEnvironment(self, gameState, np_env):
+    # Updates agent data in the env
+    np_env[np_env == "A"] = "_"
+    
+    pos = gameState.getAgentPosition(self.index)
+    np_env[pos[0]][pos[1]] = "A"
     
     return np_env
