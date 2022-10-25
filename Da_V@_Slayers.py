@@ -2,6 +2,7 @@
 # Dit is de Reinforcement Learning agent, mogelijk kunnen we ook een Evolutionary Alghorithm maken?
 # Om de file te runnen kan de de volgende command gebruiken:
 # python .\capture.py -r baselineTeam -b Da_V@_Slayers
+CONTACT = 'mart.veldkamp@hva.nl', 'merlijn.dascher@hva.nl'
 
 from msilib.schema import Environment
 from sre_parse import State
@@ -165,10 +166,10 @@ class ChonkyBoy(CaptureAgent):
     """
       Returned 2D-numpy array (datatype: str) met alle belangrijke init environment info:
         - Walls         = 'W'
-        - Food          = 'F'
-        - powercapsule  = 'P'
+        - Food          = 'FF, EF'
+        - powercapsule  = 'FP, EP'
         - Empty space   = '_'
-        - Agent         = 'A'
+        - Agent         = 'A, FA'
     """
     
     # Krijg de locatie van de walls en stops ze in de array
@@ -184,29 +185,59 @@ class ChonkyBoy(CaptureAgent):
     
 
     # Krijg de locatie van de power capsules, en voeg toe aan np_env
-    caps = gameState.getCapsules()  
-    for r in caps:
-      np_env[r[0]][r[1]] = "P"
+    Is_red = gameState.isOnRedTeam(self.index)
+    R_caps = gameState.getRedCapsules()
+    B_caps = gameState.getBlueCapsules()
+    
+    for r in R_caps:
+      if(Is_red):
+        np_env[r[0]][r[1]] = "FP"
+      else:
+        np_env[r[0]][r[1]] = "EP"
+    
+    for r in B_caps:
+      if(Is_red == 0):
+        np_env[r[0]][r[1]] = "FP"
+      else:
+        np_env[r[0]][r[1]] = "EP"
     
     # Krijg de locatie van alle food
-    x_food = 0
-    y_food = 0
-    for r in np_env:
-      for p in r:
-        if (gameState.hasFood(x_food, y_food) == 1):
-          np_env[x_food][y_food] = "F"
-        x_food = x_food + 1
-        if (x_food == np_env.shape[0]):
-          x_food = 0
-          y_food = y_food + 1
-      if (y_food == np_env.shape[1]):
-        y_food = 0
+    R_food = gameState.getRedFood()
+    B_food = gameState.getBlueFood()
+    cop_env_R_food = []
+    cop_env_B_food = []
     
+    
+    for r in R_food:
+      cop_env_R_food.append(r)
+    np_env_R_food = np.array(cop_env_R_food).astype(str)
+
+    for r in B_food:
+      cop_env_B_food.append(r)
+    np_env_B_food = np.array(cop_env_B_food).astype(str)
+    
+    # Intereer over de np array en verrander de values
+    solutions1 = np.argwhere(np_env_R_food == "True")
+    for p in solutions1:
+      if(Is_red):
+        np_env[p[0]][p[1]] = "1"
+      else:
+        np_env[p[0]][p[1]] = "0"
+        
+    solutions2 = np.argwhere(np_env_B_food == "True")
+    for p in solutions2:
+      if(Is_red == 0):
+        np_env[p[0]][p[1]] = "1"
+      else:
+        np_env[p[0]][p[1]] = "0"
+
+    
+    # Krijg positie van Agent
     pos = gameState.getAgentPosition(self.index)
     np_env[pos[0]][pos[1]] = "A"
     
     # Je kan deze print aanzetten voor debugging / check hoe de env er uit ziet.
-    # print(np_env)
+    print(np_env)
     
     return np_env
   
@@ -218,3 +249,4 @@ class ChonkyBoy(CaptureAgent):
     np_env[pos[0]][pos[1]] = "A"
     
     return np_env
+  
