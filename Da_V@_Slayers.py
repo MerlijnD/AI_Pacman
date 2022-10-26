@@ -25,11 +25,6 @@ def createTeam(firstIndex, secondIndex, isRed,
 #  -=-=-=- Agents -=-=-=-
 
 class ChonkyBoy(CaptureAgent):
-  """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
-  """
 
   def registerInitialState(self, gameState):
     """
@@ -41,7 +36,7 @@ class ChonkyBoy(CaptureAgent):
         - Welke kleur we zijn?
         - De algemene enviroment uitlezen?
     """
-
+    
     self.epsilon = 0.05
     self.gamma = 0.8
     self.alpha = 0.2
@@ -49,10 +44,12 @@ class ChonkyBoy(CaptureAgent):
     self.observationHistory = []
     self.QValue = util.Counter()
     
-    # Welke teamkleur zijn we:
-    My_Team_Color = gameState.isOnRedTeam(self.index)
-    
-    self.env = self.getEnvironment(gameState)
+    # f = open('./Da_V@_Slayers.py', 'r')
+    # content = f.read()
+    # print(content)
+    # f.close()
+    self.env = self.GetFriendlyFood(gameState)
+    print(self.env)
     
     CaptureAgent.registerInitialState(self, gameState)
 
@@ -72,96 +69,46 @@ class ChonkyBoy(CaptureAgent):
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
-    new_env = self.UpdateEnvironment(gameState, self.env)
-    print(new_env)
+    # new_env = self.UpdateEnvironment(gameState, self.env)
+    
     Possible_Actions = gameState.getLegalActions(self.index)
     """
-    Voorspel de beste Actie die daarna gegeven kan worden.
+      Voorspel de beste Actie die daarna gegeven kan worden.
       Nu is dat een random actie van de list "Possible_Actions"
     """
     
-    if util.flipCoin(self.epsilon):
-      return random.choice(Possible_Actions)
+    return random.choice(Possible_Actions)
     
+
+  def GetFriendlyFood(self, gameState):
+    if gameState.isOnRedTeam(self.index):
+      Friendly_food = gameState.getRedFood()
     else:
-      # print(self.computeActionFromQValues(gameState))
-      return self.computeActionFromQValues(gameState)
-
-  def getQValue(self, state, action):
-      if self.QValue[state, action] == 0:
-        return 0
-      return self.QValue[state, action]
-
-  def computeValueFromQValues(self, gameState):
-      """
-        Returns max_action Q(state,action)
-        where the max is over legal actions.  Note that if
-        there are no legal actions, which is the case at the
-        terminal state, you should return a value of 0.0.
-      """
-
-      # Get the legal actions
-      legal = gameState.getLegalActions(self.index)
-
-      # Return 0 if there are no legal actions
-      if len(legal) == 0:
-        return 0.0
-
-      # Set up variable that can be overwritten
-      maxQ = float('-inf')
-
-      # Loop over the legal actions
-      for action in legal:
-
-        # Overwrite if the score is better than the previously saved score
-        if self.getQValue(gameState, action) > maxQ:
-          maxQ = self.getQValue(gameState, action)
-      
-      # Return the best score
-      return maxQ
-
-  def computeActionFromQValues(self, gameState):
-
-      # Call empty list to save best actions
-      best = []
-
-      # Get legal actions
-      legal = gameState.getLegalActions(self.index)
-
-      # Set up variable that can be overwritten
-      maxQ = float('-inf')
-
-      # Loop over legal actions
-      for action in legal:
-
-        # Save best state and action if there is an improvement
-        if self.getQValue(gameState, action) > maxQ:
-          maxQ = self.getQValue(gameState, action)
-          best = [action]
-
-        # Add the action if the result is the same 
-        elif self.getQValue(gameState, action) == maxQ:
-          best.append(action)
-
-      # Choose random action out of the best options
-      return random.choice(best)
-
-  def update(self, gameState, action, nextState, reward):
-      """
-        The parent class calls this to observe a
-        state = action => nextState and reward transition.
-        You should do your Q-Value update here
-
-        NOTE: You should never call this function,
-        it will be called on your behalf
-      """
-      # Start with the partial score, based out of the reward, the discount and the computed value
-      part = reward + self.discount * self.computeValueFromQValues(nextState)
-      dict_key = gameState, action
-
-      # Compute the final score
-      self.QValue[dict_key] = (1.0 - self.alpha) * self.getQValue(gameState, action) + self.alpha * part
-
+      Friendly_food = gameState.getBlueFood()
+    Friendly_food_copy = []
+    for r in Friendly_food:
+      Friendly_food_copy.append(r)
+    np_friendly_food = np.array(Friendly_food_copy).astype(bool)
+    
+    for r in np_friendly_food:
+      for p in r:
+        if (p == True):
+          
+    
+    return np_friendly_food
+  
+  def GetEnemyFood(self, gameState):
+    if gameState.isOnRedTeam(self.index):
+      enemy_food = gameState.getBlueFood()
+    else:
+      enemy_food = gameState.getRedFood()
+    Enemy_food_copy = []
+    for r in enemy_food:
+      Enemy_food_copy.append(r)
+    np_enemy_food = np.array(Enemy_food_copy).astype(bool)
+        
+    return np_enemy_food
+  
   def getEnvironment(self, gameState):
     """
       Returned 2D-numpy array (datatype: str) met alle belangrijke init environment info:
@@ -237,7 +184,7 @@ class ChonkyBoy(CaptureAgent):
     np_env[pos[0]][pos[1]] = "A"
     
     # Je kan deze print aanzetten voor debugging / check hoe de env er uit ziet.
-    # print(np_env)
+    print(np_env)
     
     return np_env
   
