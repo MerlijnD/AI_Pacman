@@ -48,7 +48,7 @@ class ChonkyBoy(CaptureAgent):
     # content = f.read()
     # print(content)
     # f.close()
-    self.env = self.GetFriendlyFood(gameState)
+    self.env = self.FriendlyFood(gameState)
     print(self.env)
     
     CaptureAgent.registerInitialState(self, gameState)
@@ -80,34 +80,73 @@ class ChonkyBoy(CaptureAgent):
     return random.choice(Possible_Actions)
     
 
-  def GetFriendlyFood(self, gameState):
+  def FriendlyFood(self, gameState):
     if gameState.isOnRedTeam(self.index):
       Friendly_food = gameState.getRedFood()
     else:
       Friendly_food = gameState.getBlueFood()
+    
     Friendly_food_copy = []
-    for r in Friendly_food:
-      Friendly_food_copy.append(r)
+    
+    for row in Friendly_food:
+      Friendly_food_copy.append(row)
+    
     np_friendly_food = np.array(Friendly_food_copy).astype(bool)
     
-    for r in np_friendly_food:
-      for p in r:
-        if (p == True):
-          
+    Food_coordinates = []
+    row = 0
+    column = 0
     
-    return np_friendly_food
+    for i in np_friendly_food:
+      column = 0
+      for j in i:
+        if j == True:
+          Food_coordinates.append((row, column))
+        column += 1
+      row += 1
+    
+    pacman_position = gameState.getAgentPosition(self.index)    
+    
+    Food_coordinates_norm = []
+
+    for coordinate in Food_coordinates:
+      Food_coordinates_norm.append(tuple(map(lambda i, j: i - j, coordinate, pacman_position)))
+
+    return Food_coordinates_norm
   
-  def GetEnemyFood(self, gameState):
+  def EnemyFood(self, gameState):
     if gameState.isOnRedTeam(self.index):
       enemy_food = gameState.getBlueFood()
     else:
       enemy_food = gameState.getRedFood()
+    
     Enemy_food_copy = []
-    for r in enemy_food:
-      Enemy_food_copy.append(r)
+
+    for row in enemy_food:
+      Enemy_food_copy.append(row)
+
     np_enemy_food = np.array(Enemy_food_copy).astype(bool)
-        
-    return np_enemy_food
+
+    Food_coordinates = []
+    row = 0
+    column = 0
+
+    for i in np_enemy_food:
+      column = 0
+      for j in i:
+        if j == True:
+          Food_coordinates.append((row, column))
+        column += 1
+      row += 1
+    
+    pacman_position = gameState.getAgentPosition(self.index)
+
+    Food_coordinates_norm = []
+
+    for coordinate in Food_coordinates:
+      Food_coordinates_norm.append(tuple(map(lambda i, j: i - j, coordinate, pacman_position)))
+
+    return Food_coordinates_norm
   
   def getEnvironment(self, gameState):
     """
