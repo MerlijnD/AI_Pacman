@@ -148,6 +148,40 @@ class ChonkyBoy(CaptureAgent):
 
     return Food_coordinates_norm
   
+    
+  def FriendlyCapsules(self, gameState):
+    # [a, Q(s,a) for a in s.getlegalactions]
+  
+    if gameState.isOnRedTeam(self.index):
+      Friendly_capsules = gameState.getRedCapsules()
+    else:
+      Friendly_capsules = gameState.getBlueCapsules()
+    
+    Pac_Pos = gameState.getAgentPosition(self.index)
+    Pac_Pos = list(Pac_Pos)
+    Normal_Friendly_capsules = [0,0]
+    Normal_Friendly_capsules[0] = Pac_Pos[0] - Friendly_capsules[0][0]
+    Normal_Friendly_capsules[1] = Pac_Pos[1] - Friendly_capsules[0][1]
+
+    return Normal_Friendly_capsules
+
+  def EnemyCapsules(self, gameState):
+    # [a, Q(s,a) for a in s.getlegalactions]
+  
+    if gameState.isOnRedTeam(self.index):
+      Friendly_capsules = gameState.getBlueCapsules()
+    else:
+      Friendly_capsules = gameState.getRedCapsules()
+    
+    Pac_Pos = gameState.getAgentPosition(self.index)
+    Pac_Pos = list(Pac_Pos)
+    Normal_Friendly_capsules = [0,0]
+    Normal_Friendly_capsules[0] = Pac_Pos[0] - Friendly_capsules[0][0]
+    Normal_Friendly_capsules[1] = Pac_Pos[1] - Friendly_capsules[0][1]
+    print(Normal_Friendly_capsules)
+    return Normal_Friendly_capsules
+      
+  
   def getEnvironment(self, gameState):
     """
       Returned 2D-numpy array (datatype: str) met alle belangrijke init environment info:
