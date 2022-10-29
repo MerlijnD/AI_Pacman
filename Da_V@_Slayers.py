@@ -48,8 +48,10 @@ class ChonkyBoy(CaptureAgent):
     # content = f.read()
     # print(content)
     # f.close()
-    self.env = self.FriendlyFood(gameState)
-    print(self.env)
+    # self.env = self.FriendlyFood(gameState)
+    # print(self.env)
+    self.walls_temp = self.WallsNormalization(gameState)
+    print(self.walls_temp)
     
     CaptureAgent.registerInitialState(self, gameState)
 
@@ -181,6 +183,36 @@ class ChonkyBoy(CaptureAgent):
     print(Normal_Friendly_capsules)
     return Normal_Friendly_capsules
       
+  def WallsNormalization(self, gameState):
+    walls = gameState.getWalls()
+    
+    walls_copy = []
+    
+    for row in walls:
+      walls_copy.append(row)
+    
+    np_walls = np.array(walls_copy).astype(bool)
+    
+    wall_coordinates = []
+    row = 0
+    column = 0
+    
+    for i in np_walls:
+      column = 0
+      for j in i:
+        if j == True:
+          wall_coordinates.append((row, column))
+        column += 1
+      row += 1
+    
+    pacman_position = gameState.getAgentPosition(self.index)    
+    
+    wall_coordinates_norm = []
+
+    for coordinate in wall_coordinates:
+      wall_coordinates_norm.append(tuple(map(lambda i, j: i - j, coordinate, pacman_position)))
+
+    return wall_coordinates_norm
   
   def getEnvironment(self, gameState):
     """
