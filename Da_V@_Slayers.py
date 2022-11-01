@@ -33,21 +33,21 @@ class ChonkyBoy(CaptureAgent):
 
   # NOTE: Dit wordt als init 1x gerunned. Voor ons belangrijk voor mogelijk:
   def registerInitialState(self, gameState):
-    """
-        - Default parameters init
-          - alpha:    learning rate
-          - epsilon:  exploration rate
-          - gamma:    discount factor
-        - Welke kleur we zijn?
-        - De algemene enviroment uitlezen?
-    """
     
-    self.epsilon = 0.05
-    self.gamma = 0.8
-    self.alpha = 0.2
-    self.numTraining = 0
-    self.observationHistory = []
-    self.QValue = util.Counter()
+    self.state_size = 5
+    self.action_size = 5
+    
+    self.memory = list(maxlen=2000)
+    
+    self.gamma = 0.95
+    
+    self.epsilon = 1.0
+    self.epsilon_decay = 0.995
+    self.epsilon_min = 0.01
+    
+    self.learning_rate = 0.001
+    
+    self.model = self._build_model_()
     
     # self.env = self.FriendlyFood(gameState)
     # print(self.env)
@@ -57,7 +57,7 @@ class ChonkyBoy(CaptureAgent):
     # print(self.walls_temp)
     
     CaptureAgent.registerInitialState(self, gameState)
-
+  
   # NOTE: Dit wordt herhaald gerunned, nu zijn beide agents deze class
   def chooseAction(self, gameState): 
     
@@ -84,6 +84,36 @@ class ChonkyBoy(CaptureAgent):
     
     return random.choice(Possible_Actions)
     
+  def _build_model_(self):
+    model = Sequential()
+    
+    model.add(Dense(24, input_dim = self.state_size, activation='relu'))
+    model.add(Dense(24, activation='relu'))
+    model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
+    
+    model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate)) # mse verranderen?
+    
+    return model
+
+  def replay(self, batch_size):
+    
+    minibatch = random.sample(self.memory, batch_size)
+    
+    for state, action, reward, next_state, done in minibatch:
+      target= reward
+      if not done:
+        target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
+      target_f = self.model.predict(state)
+      target_f[0][action] = target
+      
+      self.model.fit(state, target_f, epochs=1, verbose=0)
+  
+  def load(self, name):
+    self.model.load_weights(name)
+  
+  def save(self, name):
+    self.model.save_weights(name)
+
   def FriendlyFood(self, gameState):
     if gameState.isOnRedTeam(self.index):
       Friendly_food = gameState.getRedFood()
@@ -215,61 +245,4 @@ class ChonkyBoy(CaptureAgent):
       wall_coordinates_norm.append(tuple(map(lambda i, j: i - j, coordinate, pacman_position)))
 
     return wall_coordinates_norm
-
-class DQNAgent():
   
-  def __init__(self, state_size, action_size):
-    
-    self.state_size = state_size
-    self.action_size = action_size
-    
-    self.memory = list(maxlen=2000)
-    
-    self.gamma = 0.95
-    
-    self.epsilon = 1.0
-    self.epsilon_decay = 0.995
-    self.epsilon_min = 0.01
-    
-    self.learning_rate = 0.001
-    
-    self.model = self._build_model_()
-  
-  def _build_model_(self):
-    model = Sequential()
-    
-    model.add(Dense(24, input_dim = self.state_size, activation='relu'))
-    model.add(Dense(24, activation='relu'))
-    model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
-    
-    model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
-    
-    return model
-    
-  def remember(self, state, action, reward, next_state, done):
-    self.memory.append((state, action, reward, next_state, done))
-  
-  def act(self, state, action, reward, next_state, done):
-    if np.random.rand() <= self.epsilon:
-      return random.randrange(self.action_size)
-    act_values = self.model.predict(state)
-    return np.argmax(act_values[0])
-  
-  def replay(self, batch_size):
-    
-    minibatch = random.sample(self.memory, batch_size)
-    
-    for state, action, reward, next_state, done in minibatch:
-      target= reward
-      if not done:
-        target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-      target_f = self.model.predict(state)
-      target_f[0][action] = target
-      
-      self.model.fit(state, target_f, epochs=1, verbose=0)
-  
-  def load(self, name):
-    self.model.load_weights(name)
-  
-  def save(self, name):
-    self.model.save_weights(name)
