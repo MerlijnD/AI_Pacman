@@ -49,9 +49,6 @@ class ChonkyBoy(CaptureAgent):
     self.observationHistory = []
     self.QValue = util.Counter()
     
-    # Welke teamkleur zijn we:
-    My_Team_Color = gameState.isOnRedTeam(self.index)
-    
     self.env = self.getEnvironment(gameState)
     
     CaptureAgent.registerInitialState(self, gameState)

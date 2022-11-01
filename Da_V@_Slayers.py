@@ -17,7 +17,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 
 # -=-=-=- Team creation -=-=-=-
 
@@ -37,7 +37,7 @@ class ChonkyBoy(CaptureAgent):
     self.state_size = 5
     self.action_size = 5
     
-    self.memory = list(maxlen=2000)
+    self.memory = list() # maxlen=2000
     
     self.gamma = 0.95
     
@@ -74,27 +74,41 @@ class ChonkyBoy(CaptureAgent):
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
-    # new_env = self.UpdateEnvironment(gameState, self.env)
     
-    Possible_Actions = gameState.getLegalActions(self.index)
     """
       Voorspel de beste Actie die daarna gegeven kan worden.
       Nu is dat een random actie van de list "Possible_Actions"
     """
+    if util.flipCoin(self.epsilon):
+      action = random.choice(gameState.getLegalActions(self.index))
+    else:
+      action = self.model_predict()
     
-    return random.choice(Possible_Actions)
+    return action
     
   def _build_model_(self):
     model = Sequential()
     
-    model.add(Dense(24, input_dim = self.state_size, activation='relu'))
+    model.add(Dense(5, input_dim = self.state_size, activation='relu'))
+    model.add(Dense(12, activation='relu'))
     model.add(Dense(24, activation='relu'))
+    model.add(Dense(12, activation='relu'))
+    model.add(Dense(5, activation='relu'))
     model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
     
-    model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate)) # mse verranderen?
+    model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate)) # mse verranderen?
     
     return model
 
+  def remember(self, state, action, reward, next_state, done):
+    self.memory.append((state, action, reward, next_state, done))
+  
+  def model_predict(self, state):
+    act_values = self.model.predict(state)
+    # Model predict output vergelijken met legal states, en bool list aanpassen
+    return np.argmax(act_values[0])
+
+  # Train?
   def replay(self, batch_size):
     
     minibatch = random.sample(self.memory, batch_size)
