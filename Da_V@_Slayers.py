@@ -13,6 +13,11 @@ import random, time, util
 from game import Directions
 import game
 import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
 
 # -=-=-=- Team creation -=-=-=-
 
@@ -210,3 +215,48 @@ class ChonkyBoy(CaptureAgent):
       wall_coordinates_norm.append(tuple(map(lambda i, j: i - j, coordinate, pacman_position)))
 
     return wall_coordinates_norm
+
+class DQNAgent():
+  
+  def __init__(self, state_size, action_size):
+    
+    self.state_size = state_size
+    self.action_size = action_size
+    
+    self.memory = list(maxlen=2000)
+    
+    self.gamma = 0.95
+    
+    self.epsilon = 1.0
+    self.epsilon_decay = 0.995
+    self.epsilon_min = 0.01
+    
+    self.learning_rate = 0.001
+    
+    self.model = self._build_model_()
+  
+  def _build_model_(self):
+    model = Sequential()
+    
+    model.add(Dense(24, input_dim = self.state_size, activation='relu'))
+    model.add(Dense(24, activation='relu'))
+    model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
+    
+    model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
+    
+    return model
+    
+  def remember(self, state, action, reward, next_state, done):
+    pass
+  
+  def act(self, state, action, reward, next_state, done):
+    pass
+  
+  def replay(self, batch_size):
+    pass
+  
+  def load(self, name):
+    pass
+  
+  def save(self, name):
+    pass
