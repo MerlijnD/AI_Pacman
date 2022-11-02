@@ -4,20 +4,17 @@
 # python .\capture.py -r baselineTeam -b Da_V@_Slayers
 CONTACT = 'mart.veldkamp@hva.nl', 'merlijn.dascher@hva.nl'
 
-from msilib.schema import Environment
-from sre_parse import State
-import string
-from tkinter import Y
+import pacman
 from captureAgents import CaptureAgent
-import random, time, util
-from game import Directions
-import game
+import random, util
+from game import AgentState
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
+from collections import deque
 
 # -=-=-=- Team creation -=-=-=-
 
@@ -36,9 +33,9 @@ class ChonkyBoy(CaptureAgent):
     
     self.state_size = len(self.curr_state_size(gameState)) # walls, food, pac-man loc in vizier, hoeveel food heeft pac-man, time left, current score
     self.action_size = 5
-     
-    self.memory = list() # maxlen=2000
     
+    self.memory = deque(maxlen=2000)
+    self.state = [0,0,0]
     self.gamma = 0.95
     
     self.epsilon = 1.0
@@ -49,18 +46,11 @@ class ChonkyBoy(CaptureAgent):
     
     self.model = self._build_model_()
     
-    # self.env = self.FriendlyFood(gameState)
-    # print(self.env)
-    # self.caps = self.FriendlyCapsules(gameState)
-    # print(self.caps)
-    # self.walls_temp = self.WallsNormalization(gameState)
-    # print(self.walls_temp)
-    
     CaptureAgent.registerInitialState(self, gameState)
   
   # NOTE: Dit wordt herhaald gerunned, nu zijn beide agents deze class
-  def chooseAction(self, gameState): 
-    
+  def chooseAction(self, gameState: pacman.GameState): 
+
     # Dit is de stappen die je moet zetten om een Reinforcement Learning (vgm)
     """ 
       Geef een Reward / Q-value.
@@ -68,13 +58,35 @@ class ChonkyBoy(CaptureAgent):
       of pac-man is gegeten (als ghost zijnde)
       Of General Gamestates zoals in het midden van het veld zich bevinden
     """
+    reward = -1
+    paccy: AgentState = gameState.data._eaten
+    team_ind_r = gameState.getRedTeamIndices()
+    team_ind_b = gameState.getBlueTeamIndices()
+    if gameState.isOnRedTeam():
 
+      for agents in paccy:
+        if agents[team_ind_r[0]] or agents[team_ind_r[1]] == True:
+          reward = -1000
+        if agents[team_ind_b[0]] or agents[team_ind_b[1]] == True:
+          reward = 1000
+    else:
+
+      for agents in paccy:
+        if agents[team_ind_b[0]] or agents[team_ind_b[1]] == True:
+          reward = -1000
+        if agents[team_ind_r[0]] or agents[team_ind_r[1]] == True:
+          reward = 1000
+    if self.state[1] > int(gameState.getScore()):
+      reward = 1000
+
+    
     """
       Krijg de state van le ChonkyBoy 
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
     self.state = self.curr_state_size(gameState)
+    # print(self.state_size)
     """
       Voorspel de beste Actie die daarna gegeven kan worden.
       Nu is dat een random actie van de list "Possible_Actions"
@@ -84,15 +96,16 @@ class ChonkyBoy(CaptureAgent):
     else:
       action = self.model_predict(self.state)
     
+    # print(action)
     return action
     
   def _build_model_(self):
     model = Sequential()
     
     model.add(Dense(5, input_dim = self.state_size, activation='relu'))
-    model.add(Dense(12, activation='relu'))
-    model.add(Dense(24, activation='relu'))
-    model.add(Dense(12, activation='relu'))
+    model.add(Dense(50, activation='relu'))
+    model.add(Dense(100, activation='relu'))
+    model.add(Dense(50, activation='relu'))
     model.add(Dense(5,  activation='relu'))
     model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
     
@@ -113,8 +126,23 @@ class ChonkyBoy(CaptureAgent):
   def curr_state_size(self, gameState):
     
     mylist = []
+    paccy: AgentState = gameState.data.agentStates[self.index]
     mylist.append(int(gameState.isOnRedTeam(self.index)))
     mylist.append(int(gameState.getScore()))
+    
+    # Is ghost or pacman
+    mylist.append(int(paccy.isPacman))
+          
+    # Genormaliseerde enemy locatie
+        
+    # hamy many food carrying
+    mylist.append(int(paccy.numCarrying))
+    
+    # scared timer
+    mylist.append(int(paccy.scaredTimer))
+    
+    # num returned
+    mylist.append(int(paccy.numReturned))
     
     for distance in gameState.getAgentDistances():
       mylist.append(int(distance))
@@ -138,8 +166,8 @@ class ChonkyBoy(CaptureAgent):
     for x, y in self.EnemyCapsules(gameState):
       mylist.append(int(x))
       mylist.append(int(y))
-    print(len(mylist))
-    return mylist
+      
+    return np.array(mylist)
 
   # Train?
   def replay(self, batch_size):
