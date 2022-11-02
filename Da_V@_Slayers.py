@@ -63,20 +63,6 @@ class ChonkyBoy(CaptureAgent):
     team_ind_r = gameState.getRedTeamIndices()
     team_ind_b = gameState.getBlueTeamIndices()
 
-    # if gameState.isOnRedTeam(self.index):
-    #   for agents in paccy:
-    #     if agents[team_ind_r[0]] == True or agents[team_ind_r[1]] == True:
-    #       self.reward = -1000
-    #     if agents[team_ind_b[0]] == True or agents[team_ind_b[1]] == True:
-    #       self.reward = 1000
-    # else:
-    #   for agents in paccy:
-    #     print(f"Wollah agents {agents}")
-    #     if agents[team_ind_b[0]] == True or agents[team_ind_b[1]] == True:
-    #       self.reward = -1000
-    #     if agents[team_ind_r[0]] == True or agents[team_ind_r[1]] == True:
-    #       self.reward = 1000
-
     if gameState.isOnRedTeam(self.index):
       if paccy[team_ind_r[0]] == True or paccy[team_ind_r[1]] == True:
         self.reward = -1000
