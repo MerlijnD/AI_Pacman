@@ -58,26 +58,38 @@ class ChonkyBoy(CaptureAgent):
       of pac-man is gegeten (als ghost zijnde)
       Of General Gamestates zoals in het midden van het veld zich bevinden
     """
-    reward = -1
+    self.reward = -1
     paccy: AgentState = gameState.data._eaten
     team_ind_r = gameState.getRedTeamIndices()
     team_ind_b = gameState.getBlueTeamIndices()
-    if gameState.isOnRedTeam():
 
-      for agents in paccy:
-        if agents[team_ind_r[0]] or agents[team_ind_r[1]] == True:
-          reward = -1000
-        if agents[team_ind_b[0]] or agents[team_ind_b[1]] == True:
-          reward = 1000
+    # if gameState.isOnRedTeam(self.index):
+    #   for agents in paccy:
+    #     if agents[team_ind_r[0]] == True or agents[team_ind_r[1]] == True:
+    #       self.reward = -1000
+    #     if agents[team_ind_b[0]] == True or agents[team_ind_b[1]] == True:
+    #       self.reward = 1000
+    # else:
+    #   for agents in paccy:
+    #     print(f"Wollah agents {agents}")
+    #     if agents[team_ind_b[0]] == True or agents[team_ind_b[1]] == True:
+    #       self.reward = -1000
+    #     if agents[team_ind_r[0]] == True or agents[team_ind_r[1]] == True:
+    #       self.reward = 1000
+
+    if gameState.isOnRedTeam(self.index):
+      if paccy[team_ind_r[0]] == True or paccy[team_ind_r[1]] == True:
+        self.reward = -1000
+      if paccy[team_ind_b[0]] == True or paccy[team_ind_b[1]] == True:
+        self.reward = 1000
     else:
+      if paccy[team_ind_b[0]] == True or paccy[team_ind_b[1]] == True:
+        self.reward = -1000
+      if paccy[team_ind_r[0]] == True or paccy[team_ind_r[1]] == True:
+        self.reward = 1000
 
-      for agents in paccy:
-        if agents[team_ind_b[0]] or agents[team_ind_b[1]] == True:
-          reward = -1000
-        if agents[team_ind_r[0]] or agents[team_ind_r[1]] == True:
-          reward = 1000
     if self.state[1] > int(gameState.getScore()):
-      reward = 1000
+      self.reward = 1000
 
     
     """
