@@ -34,7 +34,7 @@ class ChonkyBoy(CaptureAgent):
   # NOTE: Dit wordt als init 1x gerunned. Voor ons belangrijk voor mogelijk:
   def registerInitialState(self, gameState):
     
-    self.state_size = len(self.calc_state_size(gameState)) # walls, food, pac-man loc in vizier, hoeveel food heeft pac-man, time left, current score
+    self.state_size = len(self.curr_state_size(gameState)) # walls, food, pac-man loc in vizier, hoeveel food heeft pac-man, time left, current score
     self.action_size = 5
      
     self.memory = list() # maxlen=2000
@@ -74,7 +74,7 @@ class ChonkyBoy(CaptureAgent):
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
-    self.state = self.calc_state_size(gameState)
+    self.state = self.curr_state_size(gameState)
     """
       Voorspel de beste Actie die daarna gegeven kan worden.
       Nu is dat een random actie van de list "Possible_Actions"
@@ -110,7 +110,7 @@ class ChonkyBoy(CaptureAgent):
     return np.argmax(act_values[0])
 
   # returned all the relevant state info
-  def calc_state_size(self, gameState):
+  def curr_state_size(self, gameState):
     
     mylist = []
     mylist.append(int(gameState.isOnRedTeam(self.index)))
@@ -118,15 +118,27 @@ class ChonkyBoy(CaptureAgent):
     
     for distance in gameState.getAgentDistances():
       mylist.append(int(distance))
-      print(distance)
     
     for x,y in self.WallsNormalization(gameState):
       mylist.append(int(x))
       mylist.append(int(y))
     
+    for x,y in self.FriendlyFood(gameState):
+      mylist.append(int(x))
+      mylist.append(int(y))
+      
+    for x, y in self.FriendlyCapsules(gameState):
+      mylist.append(int(x))
+      mylist.append(int(y))
     
-    
-    # print(mylist)s
+    for x, y in self.EnemyFood(gameState):
+      mylist.append(int(x))
+      mylist.append(int(y))
+      
+    for x, y in self.EnemyCapsules(gameState):
+      mylist.append(int(x))
+      mylist.append(int(y))
+    print(len(mylist))
     return mylist
 
   # Train?
