@@ -34,9 +34,9 @@ class ChonkyBoy(CaptureAgent):
   # NOTE: Dit wordt als init 1x gerunned. Voor ons belangrijk voor mogelijk:
   def registerInitialState(self, gameState):
     
-    self.state_size = 5
+    self.state_size = len(self.calc_state_size(gameState)) # walls, food, pac-man loc in vizier, hoeveel food heeft pac-man, time left, current score
     self.action_size = 5
-    
+     
     self.memory = list() # maxlen=2000
     
     self.gamma = 0.95
@@ -74,7 +74,7 @@ class ChonkyBoy(CaptureAgent):
       (Dit kan alle relevante informatie over het speelveld zijn)
       Alles wat we relevante informatie kunnen vinden
     """
-    
+    self.state = self.calc_state_size(gameState)
     """
       Voorspel de beste Actie die daarna gegeven kan worden.
       Nu is dat een random actie van de list "Possible_Actions"
@@ -82,7 +82,7 @@ class ChonkyBoy(CaptureAgent):
     if util.flipCoin(self.epsilon):
       action = random.choice(gameState.getLegalActions(self.index))
     else:
-      action = self.model_predict()
+      action = self.model_predict(self.state)
     
     return action
     
@@ -93,7 +93,7 @@ class ChonkyBoy(CaptureAgent):
     model.add(Dense(12, activation='relu'))
     model.add(Dense(24, activation='relu'))
     model.add(Dense(12, activation='relu'))
-    model.add(Dense(5, activation='relu'))
+    model.add(Dense(5,  activation='relu'))
     model.add(Dense(self.action_size, activation='linear')) # maybe verranderen
     
     model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate)) # mse verranderen?
@@ -103,10 +103,31 @@ class ChonkyBoy(CaptureAgent):
   def remember(self, state, action, reward, next_state, done):
     self.memory.append((state, action, reward, next_state, done))
   
+  # returns best legal action
   def model_predict(self, state):
     act_values = self.model.predict(state)
     # Model predict output vergelijken met legal states, en bool list aanpassen
     return np.argmax(act_values[0])
+
+  # returned all the relevant state info
+  def calc_state_size(self, gameState):
+    
+    mylist = []
+    mylist.append(int(gameState.isOnRedTeam(self.index)))
+    mylist.append(int(gameState.getScore()))
+    
+    for distance in gameState.getAgentDistances():
+      mylist.append(int(distance))
+      print(distance)
+    
+    for x,y in self.WallsNormalization(gameState):
+      mylist.append(int(x))
+      mylist.append(int(y))
+    
+    
+    
+    # print(mylist)s
+    return mylist
 
   # Train?
   def replay(self, batch_size):
