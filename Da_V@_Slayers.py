@@ -62,6 +62,8 @@ class ChonkyBoy(CaptureAgent):
     paccy: AgentState = gameState.data._eaten
     team_ind_r = gameState.getRedTeamIndices()
     team_ind_b = gameState.getBlueTeamIndices()
+    print(f"Lose: {gameState.data._lose}")
+    print(f"Win: {gameState.data._win}")
 
     if gameState.isOnRedTeam(self.index):
       if paccy[team_ind_r[0]] == True or paccy[team_ind_r[1]] == True:
@@ -76,7 +78,6 @@ class ChonkyBoy(CaptureAgent):
 
     if self.state[1] > int(gameState.getScore()):
       self.reward = 1000
-
     
     """
       Krijg de state van le ChonkyBoy 

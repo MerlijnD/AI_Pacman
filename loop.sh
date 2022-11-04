@@ -1,4 +1,4 @@
-for i in {1..4}
+for i in {1..5}
 do
-   python capture.py -r baselineTeam.py -b Da_V@_Slayers.py -Q
+   python capture.py -r baselineTeam.py -b baselineOffence.py -Q
 done
