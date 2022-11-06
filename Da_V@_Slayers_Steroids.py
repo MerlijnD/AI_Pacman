@@ -5,15 +5,17 @@
 CONTACT = 'mart.veldkamp@hva.nl', 'merlijn.dascher@hva.nl'
 
 from configparser import LegacyInterpolation
-from AI_Pacman.baselineUpgrade import ReflexCaptureAgent, getAllTunnels, getSuccsorsPos, getTunnelEntry, manhattanDist
-from AI_Pacman.capture import noisyDistance
-from AI_Pacman.util import nearestPoint
+from capture import noisyDistance
+from util import nearestPoint
 from captureAgents import CaptureAgent
 import random, util, time
 from game import Directions
 import math
 
 # -=-=-=- Team creation -=-=-=-
+tunnels = []
+defensiveTunnels = []
+walls = []
 
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'OffensiveChock', second = 'OffensiveChock'):
@@ -32,26 +34,24 @@ def moreTunnels(legalPositions, tunnels):
   for legal in legalPositions:
     num1 = 0
     num2 = 0
-    for pos in legal:
-      x, y = pos
-      if (x + 1, y) in tunnels:
-        num1 += 1
-      if (x + 1, y) in tunnels:
-        num1 += 1
-      if (x + 1, y) in tunnels:
-        num1 += 1
-      if (x + 1, y) in tunnels:
-        num1 += 1
-    for pos in legal:
-      x, y = pos
-      if (x + 1, y) in legalPositions:
-        num2 += 1
-      if (x + 1, y) in legalPositions:
-        num2 += 1
-      if (x + 1, y) in legalPositions:
-        num2 += 1
-      if (x + 1, y) in legalPositions:
-        num2 += 1
+    x, y = legal
+    if (x + 1, y) in tunnels:
+      num1 += 1
+    if (x + 1, y) in tunnels:
+      num1 += 1
+    if (x + 1, y) in tunnels:
+      num1 += 1
+    if (x + 1, y) in tunnels:
+      num1 += 1
+    x, y = legal
+    if (x + 1, y) in legalPositions:
+      num2 += 1
+    if (x + 1, y) in legalPositions:
+      num2 += 1
+    if (x + 1, y) in legalPositions:
+      num2 += 1
+    if (x + 1, y) in legalPositions:
+      num2 += 1
     if num2 - num1 == 1 and legal not in tunnels:
       newTunnels.append(legal)
     num1 = 0
@@ -84,6 +84,28 @@ def getCurrentPosTunnel(pos, tunnels):
       for succPos in successorPos:
         if succPos not in empty:
           queue.push(succPos)
+
+def getSuccsorsPos(pos, legalPositions):
+  succsorPos = []
+  x, y = pos
+  if (x + 1, y) in legalPositions:
+    succsorPos.append((x + 1, y))
+  if (x + 1, y) in legalPositions:
+    succsorPos.append((x - 1, y))
+  if (x + 1, y) in legalPositions:
+    succsorPos.append((x, y + 1))
+  if (x + 1, y) in legalPositions:
+    succsorPos.append((x, y - 1))
+  return succsorPos
+
+def getTunnelEntrance(pos, tunnels, legalPositions):
+  if pos not in tunnels:
+    return None
+  currentTunnel = getCurrentPosTunnel(pos, tunnels)
+  for tnl in currentTunnel:
+    entrance = getCurrentPosTunnel(tnl, tunnels, legalPositions)
+    if entrance != None:
+      return entrance
 
 class Filter:
 
@@ -161,7 +183,7 @@ class reflexCaptureAgent(CaptureAgent):
   def registerInitialState(self, gameState):
 
     self.start = gameState.getAgentPosition(self.index)
-    CaptureAgent.registerInitialState(self.gameState)
+    CaptureAgent.registerInitialState(self, gameState)
 
     global walls 
     global tunnels
@@ -172,7 +194,7 @@ class reflexCaptureAgent(CaptureAgent):
     self.changeEntry = False
     self.nextEntry = None
     self.tunnelEntry = None
-    self.capsule = None
+    self.capsules = None
     self.nearestSafeFood = None
     self.nearestTunnelFood = None
     self.returnHome = None
@@ -185,6 +207,13 @@ class reflexCaptureAgent(CaptureAgent):
 
     walls = gameState.getWalls().asList()
     width = gameState.data.layout.width
+    
+    if len(tunnels) == 0:
+      legalPositions = []
+      for noWall in gameState.getWalls().asList(False):
+        legalPositions.append(noWall)
+      tunnels = getTunnels(legalPositions)
+      freeRoam = list(set(legalPositions).difference(set(tunnels)))
 
     legalRed = []
     for pos in legalPositions:
@@ -197,13 +226,6 @@ class reflexCaptureAgent(CaptureAgent):
         legalBlue.append(pos)
 
     self.enemyGuess = Filter(self, gameState)
-
-    if len(tunnels) == 0:
-      legalPositions = []
-      for noWall in gameState.getWalls().asList(False):
-        legalPositions.append(noWall)
-      tunnels = getTunnels(legalPositions)
-      freeRoam = list(set(legalPositions).difference(set(tunnels)))
 
     if len(defensiveTunnels) == 0:
       if self.red:
@@ -322,9 +344,9 @@ class reflexCaptureAgent(CaptureAgent):
     else:
       return blueEntry
 
-class OffensiveChock(ReflexCaptureAgent):
+class OffensiveChock(reflexCaptureAgent):
 
-  def getFeatues(self, gameState, action):
+  def getFeatures(self, gameState, action):
 
     enemies = []
     ghosts = []
@@ -348,7 +370,7 @@ class OffensiveChock(ReflexCaptureAgent):
       enemies.append(gameState.getAgentState(opponent))
 
     for enemy in enemies:
-      if not enemy.isPacman and enemy.getPosition() is not None and manhattanDist(currentPos, enemy.getPosition()) <= 5:
+      if not enemy.isPacman and enemy.getPosition() is not None and util.manhattanDist(currentPos, enemy.getPosition()) <= 5:
         ghosts.append(enemy)
     
     for scared in ghosts:
@@ -367,7 +389,7 @@ class OffensiveChock(ReflexCaptureAgent):
       if tFood in tunnels:
         tunnelFood.append(tFood)
 
-    if len(ghost) == 0:
+    if len(ghosts) == 0:
       self.capsule = None
       self.nextOpenFood = None
       self.nextTunnelFood = None
@@ -451,7 +473,7 @@ class OffensiveChock(ReflexCaptureAgent):
     if len(activeGhosts) > 0 and len(tunnelFood) > 0 and len(scaredGhosts) == 0 and len(currentFood) > 2:
       safeTunnelFood = []
       for tFood in tunnelFood:
-        tunnelEntry = getTunnelEntry(tFood, tunnels, legalPositions)
+        tunnelEntry = getTunnelEntrance(tFood, tunnels, legalPositions)
         tunnelFoodDistance = self.getMazeDistance(currentPos, tFood) + self.getMazeDistance(tFood, tunnelEntry)
         for activeGho in activeGhosts:
           if tunnelFoodDistance < min(self.getMazeDistance(activeGho.getPosition(), tunnelEntry)):
@@ -526,12 +548,12 @@ class OffensiveChock(ReflexCaptureAgent):
       if emptyTunnel != 0 and emptyTunnel * 2 >= scaredGhosts[0].scaredTimer -1:
         features["wasteAction"] = -1
 
-    if self.nextEntrance != None and features["goToSafeFood"] == 0:
+    if self.nextEntry != None and features["goToSafeFood"] == 0:
       features["goToNextEntrance"] = self.getMazeDistance(nextPos, self.nextEntrance)
 
     return features
 
-  def getWeights(self):
+  def getWeights(self, gameState, action):
     return {"successorScore": 1,"return": -1, "ghostDist": -10, "dead": -1000, "freeRoamFood": -3, "goToSafeFood": -10,
     "capsuleDistance": -1000, "leaveCapsule": -1,"stop": -50,"noFoodInTunnel": 100,"wasteAction": 100,"goToNextEntrance": -1000}
 
