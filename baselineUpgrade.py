@@ -655,11 +655,13 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if not gameState.getAgentState(self.index).isPacman:
         self.carriedDot = 0
 
+#!!!!!!!!!!!!!!!!!!!!!!!
     # if left time just for coming back, add this feature to force agent coming back
     if self.getTimeLeft(gameState)/4 < self.getLengthToHome(gameState) + 3: 
         features['distToHome'] = self.getLengthToHome(successor)
         return features
 
+#!!!!!!!!!!!!!!!!!!!!!
     # When no ghost nearby, the distance between Pacman with nearest food
     if len(activeGhost) == 0 and len(currentFoodList) != 0 and len(currentFoodList) >= 3:            
       features['safeFoodDist'] = min([self.getMazeDistance(myPos, food) for food in currentFoodList])
@@ -780,6 +782,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
          if checkTunnel != 0 and checkTunnel*2 >= scaredGhost[0].scaredTimer -1:
              features['wasteAction'] = -1
 
+#!!!!!!!!!!!!!!!!!!!!!
     # When Pacman in a tunnel and suddenly ghost found nearby, Pacman will judge when it 
     # should leave this tunnel
     if curPos in tunnels and len(activeGhost) > 0:
