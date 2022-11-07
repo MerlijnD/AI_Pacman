@@ -655,7 +655,6 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if not gameState.getAgentState(self.index).isPacman:
         self.carriedDot = 0
 
-#!!!!!!!!!!!!!!!!!!!!!!!
     # if left time just for coming back, add this feature to force agent coming back
     if self.getTimeLeft(gameState)/4 < self.getLengthToHome(gameState) + 3: 
         features['distToHome'] = self.getLengthToHome(successor)
@@ -914,6 +913,7 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         if  curPos not in defensiveTunnels and successor.getAgentState(self.index).getPosition() in defensiveTunnels: 
             features['wasteAction'] = -1
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!1
     # features['invaderDistance']: The distance between my ghost with the nearest invader
     # features['lengthToBoundary']: length to the nearest boundary position
     # This feature will appear when ghost chasing the Pacman, to ensure ghost 
@@ -931,6 +931,7 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
             # This feature forces the ghost does not go into a tunnel when no invader found
             features['wasteAction'] = -1
 
+#!!!!!!!!!!!!!!!!!!!!!!
     # Distance between agent and capsule, if there are invaders nearby
     if len(invaders) > 0 and len(curCapsule) != 0:         
         dist2 = [self.getMazeDistance(c, sucPos) for c in curCapsule]
@@ -939,6 +940,7 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
     # When the ghost can block tunnel to get Pacman stuck, this feature forces agent stopping
     if action == Directions.STOP: features['stop'] = 1  
 
+#!!!!!!!!!!!!!!!!!!!!!!
     # This feature let our ghost do not go reverse      
     rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
     if action == rev: features['reverse'] = 1  
