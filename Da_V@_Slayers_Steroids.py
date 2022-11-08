@@ -10,24 +10,28 @@
 # python .\capture.py -r baselineTeam -b Da_V@_Slayers
 CONTACT = 'mart.veldkamp@hva.nl', 'merlijn.dascher@hva.nl'
 
-from util import nearestPoint
+# Import the necessary libraries
 from captureAgents import CaptureAgent
-import random, util, time
+import random, util
 from game import Directions
-import math
 
 # -=-=-=- Team creation -=-=-=-
-tunnels = []
-defensiveTunnels = []
-walls = []
-
 def createTeam(firstIndex, secondIndex, isRed,
                first = 'OffensiveChock', second = 'DefensiveChonk'):
 
   # The following line is an example only; feel free to change it.
   return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
+# Build a few empty lists which can later be called on globally so they can be used by all classes
+tunnels = []
+defensiveTunnels = []
+walls = []
+
 def getTunnels(legalPositions):
+  """
+  Search the map and find all tunnels. Tunnels are basically dead end places a packman can get 
+  cornered in which means we want to 
+  """
   tunnels = []
   while len(tunnels) != len(moreTunnels(legalPositions, tunnels)):
     tunnels = moreTunnels(legalPositions, tunnels)
@@ -251,6 +255,17 @@ class reflexCaptureAgent(CaptureAgent):
       if value == Qvalue:
         bestActions.append(action)
 
+    if len(self.getFood(gameState).asList()) <= 2:
+      bestDistance = float("inf")
+      for action in actions:
+        successor = self.getSuccessor(gameState, action)
+        newPos = successor.getAgentPosition(self.index)
+        distance = self.getMazeDistance(self.start, newPos)
+        if distance < bestDistance:
+          bestActions = action
+          bestDistance = distance
+      return bestActions
+
     choice = random.choice(bestActions)
 
     return choice
@@ -260,7 +275,7 @@ class reflexCaptureAgent(CaptureAgent):
     successor = gameState.generateSuccessor(self.index, action)
     position = successor.getAgentState(self.index).getPosition()
     
-    if position != nearestPoint(position):
+    if position != util.nearestPoint(position):
       return successor.generateSuccessor(self.index, action)
     else:
       return successor
