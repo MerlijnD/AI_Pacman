@@ -1,13 +1,5 @@
-''' Vragen aan Patrick en/of Julian:
-1. Comments in het engels of nederlands?
-2. Hoe werkt het met dezelfde variabelen in loops?
-3. 
-'''
-
-
-# Dit is de Reinforcement Learning agent, mogelijk kunnen we ook een Evolutionary Alghorithm maken?
-# Om de file te runnen kan de de volgende command gebruiken:
-# python .\capture.py -r baselineTeam -b Da_V@_Slayers
+# To run the file:
+# python .\capture.py -r Da_V@_Slayers_Steroids.py -b {insert other team}
 CONTACT = 'mart.veldkamp@hva.nl', 'merlijn.dascher@hva.nl'
 
 # Import the necessary libraries
@@ -30,19 +22,41 @@ walls = []
 def getTunnels(legalPositions):
   """
   Search the map and find all tunnels. Tunnels are basically dead end places a packman can get 
-  cornered in which means we want to 
+  cornered in. This means that when we are on the offence we want to avoid these places when 
+  other pacman are nearby and on defence we want to corner the other pacman. 
   """
+
+  # Make a variable tunnels to save all the found tunnels
   tunnels = []
+
+  # Loop as long as there are no more tunnels
   while len(tunnels) != len(moreTunnels(legalPositions, tunnels)):
     tunnels = moreTunnels(legalPositions, tunnels)
+
+  # Return a list of all found tunnels
   return tunnels
 
 def moreTunnels(legalPositions, tunnels):
+  """
+  This function loops over all the valid positions a pacman can be in. It looks at the board and
+  looks for all the places where the only way to go is back. It returns a list of the previous 
+  tunnels with a new found one. 
+  """
+  
+  # Save the already found tunnels
   newTunnels = tunnels
+
+  # Loop over all the valid positions a pacman can be in
   for legal in legalPositions:
+
+    # Set up variables to save how many directions a pacman can go to
     num1 = 0
     num2 = 0
+
+    # Read the coordinates of the legal move
     x, y = legal
+
+    # Check how many directions a pacman can go to in a found tunnels
     if (x + 1, y) in tunnels:
       num1 += 1
     if (x + 1, y) in tunnels:
@@ -51,6 +65,8 @@ def moreTunnels(legalPositions, tunnels):
       num1 += 1
     if (x + 1, y) in tunnels:
       num1 += 1
+    
+    # Check how many directions a pacman can go to in the legalmoves 
     x, y = legal
     if (x + 1, y) in legalPositions:
       num2 += 1
@@ -60,14 +76,28 @@ def moreTunnels(legalPositions, tunnels):
       num2 += 1
     if (x + 1, y) in legalPositions:
       num2 += 1
+
+    # If there is only 1 move (backwards) a dead end is found
+    # Make sure the tunnel wasn't already found
     if num2 - num1 == 1 and legal not in tunnels:
       newTunnels.append(legal)
+
+    # Reset the variables 
     num1 = 0
     num2 = 0
+
+  # Return the list with the newly added tunnel
   return newTunnels
 
 def nextPosition(pos, action):
+  """
+  This function checks the all the possible next positions a pacman can take
+  """
+
+  # Read the coordinates of the legal move 
   x, y = pos
+
+  # Return the coordinates based on the direction
   if action == Directions.NORTH:
     return (x, y + 1)
   if action == Directions.EAST:
@@ -79,114 +109,210 @@ def nextPosition(pos, action):
   return pos
   
 def getCurrentPosTunnel(pos, tunnels):
+  """
+  This function will return the tunnel a pacman is currently in, if any
+  """
+  
+  # Return none if pacman is not currently in a tunnel
   if pos not in tunnels:
     return None
+
+  # Set up a queue to save the position to look at
   queue = util.Queue()
   queue.push(pos)
+
+  # List variable to save the position of the pacman in
   empty = []
+
+  # Loop until there are no more positions a pacman can go in
   while not queue.isEmpty():
+
+    # Get the position from the queue
     currentPos = queue.pop()
+
+    # Make sure the position is not already visited
     if currentPos not in empty:
+
+      # Save the current position
       empty.append(currentPos)
-      successorPos = getSuccsorsPos(currentPos, tunnels)
+
+      # Calculate the successor position
+      successorPos = getSuccessorPos(currentPos, tunnels)
+
+      # Loop over the successor positions
       for succPos in successorPos:
+
+        # Make sure the location is not already visited
         if succPos not in empty:
+
+          # Save the successor position
           queue.push(succPos)
 
-def getSuccsorsPos(pos, legalPositions):
-  succsorPos = []
+  # Return the list of the positions used to get to the end of the tunnel
+  return empty
+
+def getSuccessorPos(pos, legalPositions):
+  """
+  This function will find all the possible positions a successor can be in
+  """
+
+  # Create an empty list that can hold the successor's positions
+  successorpos = []
+
+  # Read the coordinates of the legal move
   x, y = pos
+
+  # Find all the legal positions a pacman can take from the position it's standing
   if (x + 1, y) in legalPositions:
-    succsorPos.append((x + 1, y))
+    successorpos.append((x + 1, y))
   if (x + 1, y) in legalPositions:
-    succsorPos.append((x - 1, y))
+    successorpos.append((x - 1, y))
   if (x + 1, y) in legalPositions:
-    succsorPos.append((x, y + 1))
+    successorpos.append((x, y + 1))
   if (x + 1, y) in legalPositions:
-    succsorPos.append((x, y - 1))
-  return succsorPos
+    successorpos.append((x, y - 1))
+  return successorpos
 
 def getTunnelEntrance(pos, tunnels, legalPositions):
+  """
+  This function finds the entrance to a tunnel
+  """
+
+  # Do nothing if the position is not in the tunnels list
   if pos not in tunnels:
     return None
+
+  # Get the list of position of the current tunnel
   currentTunnel = getCurrentPosTunnel(pos, tunnels)
+
+  # Loop over the positions
   for tnl in currentTunnel:
+
+    # Return the entrance if the tunnel is found
     entrance = getCurrentPosTunnel(tnl, tunnels, legalPositions)
     if entrance != None:
       return entrance
 
-class Filter:
+class Guessing:
+  """
+  This Guessing class guesses the position of opponents 
+  """
 
   def __init__(self, agent, gameState):
+    """
+    This is the class initializer
+    """
 
+    # Set up the start state and save the enemies, agent and middle of the board
     self.start = gameState.getInitialAgentPosition(agent.index)
     self.agent = agent
     self.middle = gameState.data.layout.width / 2
-    self.legalPositions = []
     self.enemies = self.agent.getOpponents(gameState)
+
+    # Define a list for the legalpositions and a dictionary for the guesses
+    self.legalPositions = []
     self.guesses = {}
 
+    # Get all the legal positions in the whole game
     for noWall in gameState.getWalls().asList(False):
       self.legalPositions.append(noWall)
 
+    # Loop over the enemies
     for enemy in self.enemies:
+
+      # Build a counter for each enemy and start with a generic number to save data
       self.guesses[enemy] = util.Counter()
       self.guesses[enemy][gameState.getInitialAgentPosition(enemy)] = 1.0
       self.guesses[enemy].normalize()
 
   def guessEnemyPos(self):
+    """
+    This function guesses where the enemy will go or has already gone
+    """
 
+    # Loop over the enemies and build a counter for the distance for each
     for enemy in self.enemies:
       distance = util.Counter()
 
+      # Loop over all the legal positions on the board
       for legal in self.legalPositions:
+
+        # Build a counter for the new distance to the enemies
         newDistance = util.Counter()
 
+        # This line saves all possible positions a pacman sees, legal or not
         allPos = [(legal[0] + i, legal[1] + j) for i in [-1,0,1] for j in [-1,0,1] if not (abs(i) == 1 and abs(j) == 1)]
 
+        # Loop over the legalpositions
         for legalPos in self.legalPositions:
+
+          # Check which of the legal positions are in all the positions the pacman can go
           if legalPos in allPos:
+
+            # Save the distance 
             newDistance[legalPos] = 1.0
+
+        # Save the average distance
         newDistance.normalize()
 
+        # Loop over the position and probability
         for pos, probability in newDistance.items():
+
+          # Update the distance prediction
           distance[pos] = distance[pos] + self.guesses[self.enemy][pos] * probability
 
+      # Calculate the average distance and update the guess
       distance.normalize()
       self.guesses[enemy] = distance
 
   def lookAround(self, agent, gameState):
+    """
+    This function uses manhattan and noisy distances to try and guess where the 
+    enemies are currently
+    """
 
+    # Get own position and distance to enemy
     myPos = gameState.getAgentPosition(agent.index)
     noisyDistance = gameState.getAgentDistances()
 
+    # Set up a counter for the distance
     distance = util.Counter()
 
+    # Loop over the enemies
     for enemy in self.enemies:
+
+      # Loop over all the legal positions
       for legal in self.legalPositions:
 
+        # Calculate the manhattan distance and probability 
         manhattan = util.manhattanDistance(myPos, legal)
         probability = gameState.getDistanceProb(manhattan, noisyDistance)
 
+        # Save the distance to the middle from the first position a pacman is in
         if agent.red:
           ifPacman = legal[0] < self.middle
         else:
           ifPacman = legal[0] > self.middle
 
+        # Run away when close to enemy ghost 
         if manhattan <= 6 or ifPacman != gameState.getAgentState(enemy).isPacman:
           distance[legal] = 0.0
         else:
           distance[legal] = self.guesses[enemy][legal] * probability
 
+      # Get the average distnaces 
       distance.normalize()
       self.guesses[enemy] = distance
 
   def possiblePos(self, enemy):
-    pos = self.guesses[enemy].argMax()
-    return pos
+    """
+    This function returns the max value of the guess 
+    """
+
+    return self.guesses[enemy].argMax()
 
 #  -=-=-=- Agents -=-=-=-
-class reflexCaptureAgent(CaptureAgent):
+class ReflexChonk(CaptureAgent):
 
   def registerInitialState(self, gameState):
 
@@ -233,7 +359,7 @@ class reflexCaptureAgent(CaptureAgent):
       if pos[0] >= width / 2:
         legalBlue.append(pos)
 
-    self.enemyGuess = Filter(self, gameState)
+    self.enemyGuess = Guessing(self, gameState)
 
     if len(defensiveTunnels) == 0:
       if self.red:
@@ -305,7 +431,7 @@ class reflexCaptureAgent(CaptureAgent):
         
         if (x, y) not in empty:
           empty.append((x, y))
-          successorPos = getSuccsorsPos((x, y), tunnels)
+          successorPos = getSuccessorPos((x, y), tunnels)
           for pos in successorPos:
             if pos not in empty:
               continuity = length + 1
@@ -327,7 +453,7 @@ class reflexCaptureAgent(CaptureAgent):
 
       if (x, y) not in empty:
         empty.append((x, y))
-        successorPos = getSuccsorsPos((x, y), tunnels)
+        successorPos = getSuccessorPos((x, y), tunnels)
 
         for pos in successorPos:
           if pos not in empty:
@@ -363,7 +489,7 @@ class reflexCaptureAgent(CaptureAgent):
     else:
       return blueEntry
 
-class OffensiveChock(reflexCaptureAgent):
+class OffensiveChock(ReflexChonk):
 
   def getFeatures(self, gameState, action):
 
@@ -449,7 +575,7 @@ class OffensiveChock(reflexCaptureAgent):
         features["dead"] = 1
       
       for ghostP in ghostPos:
-        succPos.append(getSuccsorsPos(ghostP, legalPositions))
+        succPos.append(getSuccessorPos(ghostP, legalPositions))
 
       if nextPos in ghostPos[0]:
         features["dead"] = 1
@@ -635,7 +761,7 @@ class OffensiveChock(reflexCaptureAgent):
         distanceB.append(self.getMazeDistance(curPos, lBlue))
       return min(distanceB)
 
-class DefensiveChonk(reflexCaptureAgent):
+class DefensiveChonk(ReflexChonk):
   
   def getFeatures(self, gameState, action):
 
