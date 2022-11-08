@@ -57,24 +57,24 @@ def moreTunnels(legalPositions, tunnels):
     x, y = legal
 
     # Check how many directions a pacman can go to in a found tunnels
-    if (x + 1, y) in tunnels:
+    if (x, y + 1) in tunnels:
       num1 += 1
     if (x + 1, y) in tunnels:
       num1 += 1
-    if (x + 1, y) in tunnels:
+    if (x, y - 1) in tunnels:
       num1 += 1
-    if (x + 1, y) in tunnels:
+    if (x - 1, y) in tunnels:
       num1 += 1
     
     # Check how many directions a pacman can go to in the legalmoves 
     x, y = legal
-    if (x + 1, y) in legalPositions:
+    if (x, y + 1) in legalPositions:
       num2 += 1
     if (x + 1, y) in legalPositions:
       num2 += 1
-    if (x + 1, y) in legalPositions:
+    if (x, y - 1) in legalPositions:
       num2 += 1
-    if (x + 1, y) in legalPositions:
+    if (x - 1, y) in legalPositions:
       num2 += 1
 
     # If there is only 1 move (backwards) a dead end is found
@@ -165,11 +165,11 @@ def getSuccessorPos(pos, legalPositions):
   # Find all the legal positions a pacman can take from the position it's standing
   if (x + 1, y) in legalPositions:
     successorpos.append((x + 1, y))
-  if (x + 1, y) in legalPositions:
+  if (x - 1, y) in legalPositions:
     successorpos.append((x - 1, y))
-  if (x + 1, y) in legalPositions:
+  if (x, y + 1) in legalPositions:
     successorpos.append((x, y + 1))
-  if (x + 1, y) in legalPositions:
+  if (x, y - 1) in legalPositions:
     successorpos.append((x, y - 1))
   return successorpos
 
@@ -189,9 +189,25 @@ def getTunnelEntrance(pos, tunnels, legalPositions):
   for tnl in currentTunnel:
 
     # Return the entrance if the tunnel is found
-    entrance = getCurrentPosTunnel(tnl, tunnels, legalPositions)
+    entrance = getPossibleEntry(tnl, tunnels, legalPositions)
     if entrance != None:
       return entrance
+
+def getPossibleEntry(pos, tunnels, legalPositions):
+  """
+  This function calculates the step to take to find a tunnel closeby
+  """
+
+  x, y = pos
+  if (x, y + 1) in legalPositions and (x, y + 1) not in tunnels:
+    return (x, y + 1)
+  if (x + 1, y) in legalPositions and (x + 1, y) not in tunnels:
+    return (x + 1, y)
+  if (x, y - 1) in legalPositions and (x, y - 1) not in tunnels:
+    return (x, y - 1)
+  if (x - 1, y) in legalPositions and (x - 1, y) not in tunnels:
+    return (x - 1, y)
+  return None
 
 class Guessing:
   """
@@ -308,23 +324,30 @@ class Guessing:
     """
     This function returns the max value of the guess 
     """
-
-    return self.guesses[enemy].argMax()
+    possiblity = self.guesses[enemy].argMax()
+    return possiblity
 
 #  -=-=-=- Agents -=-=-=-
 class ReflexChonk(CaptureAgent):
 
   def registerInitialState(self, gameState):
+    """
+    This function registers the initial state to start playing the game. It is a base that 
+    will be used by the offensive and defensive agents
+    """
 
+    # Register starting position
     self.start = gameState.getAgentPosition(self.index)
     CaptureAgent.registerInitialState(self, gameState)
 
+    # Define global variables 
     global walls 
     global tunnels
     global freeRoam
     global legalPositions
     global defensiveTunnels
 
+    # Build variables to safe data in
     self.changeEntry = False
     self.nextEntry = None
     self.tunnelEntry = None
@@ -333,34 +356,42 @@ class ReflexChonk(CaptureAgent):
     self.nearestTunnelFood = None
     self.goToEdge = None
     self.foodEatenByEnemy = None
-    self.ifStuck = False
     self.invaderGuess = False
 
     self.carryFood = 0
-    self.stuckStep = 0
 
+    # Save the walls and the width of the game
     walls = gameState.getWalls().asList()
     width = gameState.data.layout.width
     
+    # save all the possible positions a pacman can be in
     if len(tunnels) == 0:
       legalPositions = []
       for noWall in gameState.getWalls().asList(False):
         legalPositions.append(noWall)
+
+      # Find the tunnels
       tunnels = getTunnels(legalPositions)
+
+      # Find all the places a pacman can sefely move to
       freeRoam = list(set(legalPositions).difference(set(tunnels)))
 
+    # Get all legal red positions
     legalRed = []
     for pos in legalPositions:
       if pos[0] < width / 2:
         legalRed.append(pos)
 
+    # Get all legal blue positions
     legalBlue = []
     for pos in legalPositions:
       if pos[0] >= width / 2:
         legalBlue.append(pos)
 
+    # Guess the enemy moves 
     self.enemyGuess = Guessing(self, gameState)
 
+    # Get the tunnels on own side
     if len(defensiveTunnels) == 0:
       if self.red:
         defensiveTunnels = getTunnels(legalRed)
@@ -368,19 +399,29 @@ class ReflexChonk(CaptureAgent):
         defensiveTunnels = getTunnels(legalBlue)
 
   def chooseAction(self, gameState):
+    """
+    This functoin chooses what to do based on the legal actions and the values
+    """
+
+    # # find the legal actions a pacman can take
     actions = gameState.getLegalActions(self.index)
     values = []
+
+    # Loop over the actions and save the features and weights
     for action in actions:
       values.append(self.evaluate(gameState, action))
     
+    # Find the max value
     Qvalue = max(values)
 
     bestActions = []
 
+    # Loop over the actions and values and save the best options
     for action, value in zip(actions, values):
       if value == Qvalue:
         bestActions.append(action)
 
+    # Return to base if there are 2 or less dots to eat so we win
     if len(self.getFood(gameState).asList()) <= 2:
       bestDistance = float("inf")
       for action in actions:
@@ -392,21 +433,30 @@ class ReflexChonk(CaptureAgent):
           bestDistance = distance
       return bestActions
 
+    # Choose one of the best options
     choice = random.choice(bestActions)
 
     return choice
 
   def getSuccessor(self, gameState, action):
+    """
+    This function will get the successor based on the nearest points
+    """
 
+    # Generate successor and get the position of the agent
     successor = gameState.generateSuccessor(self.index, action)
     position = successor.getAgentState(self.index).getPosition()
     
+    # Generate the next position
     if position != util.nearestPoint(position):
       return successor.generateSuccessor(self.index, action)
     else:
       return successor
 
   def evaluate(self, gameState, action):
+    """
+    This function returns the weights and features that are being calculated
+    """
 
     features = self.getFeatures(gameState, action)
     weights = self.getWeights(gameState, action)
@@ -414,53 +464,85 @@ class ReflexChonk(CaptureAgent):
     return features * weights
 
   def checkIfTunnelEmpty(self, gameState, successor):
+    """
+    This function will check if there is any food left in the tunnel 
+    """
+    
+    # Get the position of the current state and the successor state 
     currentPos = gameState.getAgentState(self.index).getPosition()
     successorPos = successor.getAgentState(self.index).getPosition()
+
+    # If the current position is not in a tunnel and the successor position is in a tunnel
     if currentPos not in tunnels and successorPos in tunnels:
+
+      # Save the tunnel entrance 
       self.tunnelEntry = currentPos
 
+      # Define a stack to save the data
       stack = util.Stack()
       stack.push((successorPos, 1))
 
+      # Define list to save if the tunnel is empty or not
       empty = []
 
+      # As long as the stack is not empty
       while not stack.isEmpty():
         (x, y), length = stack.pop()
-        if self.getFood(gameState)[x][y]:
+
+        # Find the food 
+        if self.getFood(gameState)[int(x)][int(y)]:
           return length
         
+        # If the position is not in the empty list
         if (x, y) not in empty:
           empty.append((x, y))
           successorPos = getSuccessorPos((x, y), tunnels)
+
+          # Loop over the successor positions
           for pos in successorPos:
+
+            # Continue the search for food if the tunnel hasn't ended
             if pos not in empty:
               continuity = length + 1
               stack.push((pos, continuity))
     return 0
 
   def getFoodFromTunnel(self, gameState):
+    """
+    This function will see where the nearest food is in the tunnel
+    """
 
+    # Get the position of the agent and define a stack
     currentPos = gameState.getAgentState(self.index).getPosition()
-    stack = util.Stack()
-    stack.push(currentPos)
+    queue = util.Queue()
+    queue.push(currentPos)
 
     empty = []
 
-    while not stack.isEmpty():
-      x, y = stack.pop()
-      if self.getFood(gameState)[x][y]:
+    # As long as there is food in the tunnel
+    while not queue.isEmpty():
+      x, y = queue.pop()
+
+      # Get the position of the food
+      if self.getFood(gameState)[int(x)][int(y)]:
         return (x, y)
 
+      # If there is no food on the next position
       if (x, y) not in empty:
         empty.append((x, y))
         successorPos = getSuccessorPos((x, y), tunnels)
 
+        # Continue the path to the food
         for pos in successorPos:
           if pos not in empty:
-            stack.push(pos)
+            queue.push(pos)
     return None
 
   def getEntrance(self, gameState):
+    """
+    This function will find all the legal positions to find a path to the border
+    """
+    
     width = gameState.data.layout.width
     legalPositions = []
     legalRed = []
@@ -468,22 +550,26 @@ class ReflexChonk(CaptureAgent):
     redEntry = []
     blueEntry = []
 
+    # Find all positions in the game where a pacman can stand
     for noWall in gameState.getWalls().asList(False):
       legalPositions.append(noWall)
 
+    # Find all legal positions for the red team
     for legalR in legalPositions:
       if legalR[0] == width / 2 - 1:
         legalRed.append(legalR)
     
+    # Find all legal positions for the blue team
     for legalB in legalPositions:
       if legalB[0] == width / 2:
         legalBlue.append(legalB)
 
-    for i in legalRed:
-      for j in legalBlue:
-        if i[0] + 1 == j[0] and i[1] == j[1]:
-          redEntry.append(i)
-          blueEntry.append(j)
+    # Find all border positions 
+    for R in legalRed:
+      for B in legalBlue:
+        if R[0] + 1 == B[0] and R[1] == B[1]:
+          redEntry.append(R)
+          blueEntry.append(B)
     if self.red:
       return redEntry
     else:
@@ -491,17 +577,17 @@ class ReflexChonk(CaptureAgent):
 
 class OffensiveChock(ReflexChonk):
   """
-    Here we made the offensive agent, its a subclass of the reflex agent
-    And has specific functions and behaviour related to good offensive actions
+  This class is a subclass of the reflex agent. It has specific behaviour related 
+  to a good offensive strategy
   """
   
   def getFeatures(self, gameState, action):
     """
-      This function extracts all needed features from other functions like getFood or getCapsules.
-      It also init lists for the features that aren't given in the right format. And append them to a list.
+    This function extracts all needed features from other functions like getFood or getCapsules.
+    It also init lists for the features that aren't given in the right format. And append them to a list
     """
     
-    # init lists for features
+    # Init lists for features
     enemies = []
     ghosts = []
     scaredGhosts = []
@@ -509,21 +595,21 @@ class OffensiveChock(ReflexChonk):
     freeRoamFood = []
     tunnelFood = []
     
-    # call functions for more features and puts them in a variable
+    # Call functions for more features and puts them in a variable
     successor = self.getSuccessor(gameState, action)
     currentPos = gameState.getAgentState(self.index).getPosition()
-    newPos = successor.getAgentState(self.index).getPosition()
+    successorPos = successor.getAgentState(self.index).getPosition()
     nextPos = nextPosition(currentPos, action)
     currentFood = self.getFood(gameState).asList()
     capsules = self.getCapsules(gameState)
     emptyTunnel = self.checkIfTunnelEmpty(gameState, successor)
 
-    # init dict named "features" for saving data
+    # Init dict named "features" for saving data
     features = util.Counter()
     features["successorScore"] = self.getScore(successor)
 
 
-    # append all the features to there corresponding list
+    # Append all the features to there corresponding list
     for opponent in self.getOpponents(gameState):
       enemies.append(gameState.getAgentState(opponent))
 
@@ -531,9 +617,9 @@ class OffensiveChock(ReflexChonk):
       if not enemy.isPacman and enemy.getPosition() is not None and util.manhattanDistance(currentPos, enemy.getPosition()) <= 5:
         ghosts.append(enemy)
     
-    for scared in ghosts:
-      if scared.scaredTimer > 1:
-        scaredGhosts.append(scared)
+    for ghost in ghosts:
+      if ghost.scaredTimer > 1:
+        scaredGhosts.append(ghost)
     
     for ghost in ghosts:
       if ghost not in scaredGhosts:
@@ -543,9 +629,9 @@ class OffensiveChock(ReflexChonk):
       if food not in tunnels:
         freeRoamFood.append(food)
 
-    for tFood in currentFood:
-      if tFood in tunnels:
-        tunnelFood.append(tFood)
+    for food in currentFood:
+      if food in tunnels:
+        tunnelFood.append(food)
 
     # Checks if the len of ghost = 0. And sets the variables accordingly
     if len(ghosts) == 0:
@@ -563,7 +649,7 @@ class OffensiveChock(ReflexChonk):
     if not gameState.getAgentState(self.index).isPacman:
       self.carriedDot = 0
 
-    # Checks if the length of currentfood < 3, and goes home (Because 2 or less on the playing field is anough to win)
+    # Checks if the length of currentfood < 3, and goes home (Because 2 or less on the playing field is enough to win)
     if len(currentFood) < 3:
       features["return"] = self.getHomeDistance(successor)
 
@@ -575,14 +661,12 @@ class OffensiveChock(ReflexChonk):
 
       # append to the lists the variables
       for aGhost in activeGhosts:
-        distances.append(self.getMazeDistance(newPos, aGhost.getPosition()))
-
-      minDist = min(distances)
+        distances.append(self.getMazeDistance(successorPos, aGhost.getPosition()))
 
       for acGhost in activeGhosts:
         ghostPos.append(acGhost.getPosition())
 
-      features["ghostDist"] = minDist
+      features["ghostDist"] = 100 - min(distances)
 
       # if your nextposition = a ghost position, your dead.
       if nextPos in ghostPos:
@@ -617,23 +701,23 @@ class OffensiveChock(ReflexChonk):
         safeFood = []
         nearGhostPos = []
 
-        for fod in freeRoamFood:
+        for food in freeRoamFood:
 
           for actGhost in activeGhosts:
-            nearGhostPos.append(self.getMazeDistance(actGhost.getPosition(), fod))
+            nearGhostPos.append(self.getMazeDistance(actGhost.getPosition(), food))
 
-          if self.getMazeDistance(currentPos, fod) < min(nearGhostPos):
-            safeFood.append(fod)
+          if self.getMazeDistance(currentPos, food) < min(nearGhostPos):
+            safeFood.append(food)
 
         if len(safeFood) != 0:
 
           closestFoodDist = []
-          for foood in safeFood:
-            closestFoodDist.append(self.getMazeDistance(currentPos, foood))
+          for food in safeFood:
+            closestFoodDist.append(self.getMazeDistance(currentPos, food))
 
-          for fd in safeFood:
-            if self.getMazeDistance(currentPos, fd) == min(closestFoodDist):
-              self.nextOpenFood = fd
+          for food in safeFood:
+            if self.getMazeDistance(currentPos, food) == min(closestFoodDist):
+              self.nextOpenFood = food
               break
 
     # These are functions for edge cases. 
@@ -641,23 +725,25 @@ class OffensiveChock(ReflexChonk):
       safeTunnelFood = []
       for tFood in tunnelFood:
         tunnelEntry = getTunnelEntrance(tFood, tunnels, legalPositions)
-        tunnelFoodDistance = self.getMazeDistance(currentPos, tFood) + self.getMazeDistance(tFood, tunnelEntry)
+        ghostDist = []
         for activeGho in activeGhosts:
-          if tunnelFoodDistance < min(self.getMazeDistance(activeGho.getPosition(), tunnelEntry)):
-            safeTunnelFood.append(tFood)
+          ghostDist.append(self.getMazeDistance(activeGho.getPosition(), tunnelEntry))
+        if self.getMazeDistance(currentPos, tFood) + self.getMazeDistance(tFood, tunnelEntry) < min(ghostDist):
+          safeTunnelFood.append(tFood)
       if len(safeTunnelFood) > 0:
         closestTunnelFoodDist = []
+        for food in safeTunnelFood:
+          closestTunnelFoodDist.append(self.getMazeDistance(currentPos, food))
         for sTF in safeTunnelFood:
-          closestTunnelFoodDist.append(self.getMazeDistance(currentPos, sTF))
           if self.getMazeDistance(currentPos, sTF) == min(closestTunnelFoodDist):
             self.nextTunnelFood = sTF
             break
 
-    # Checks of nextOpenFood = 0. And then try to go home
+    # Checks if nextOpenFood = 0. And then try to go home
     if self.nextOpenFood != None:
       features["goToSafeFood"] = self.getMazeDistance(nextPos, self.nextOpenFood)
       if nextPos == self.nextOpenFood:
-        features["goToSafeFood"] = 0
+        features["goToSafeFood"] = 0.0
         self.nextOpenFood = None
 
     # Makes sure that while going to "SafeFood". it doesn't die too ghosts
@@ -667,7 +753,7 @@ class OffensiveChock(ReflexChonk):
         features["goToSafeFood"] = 0
         self.nextTunnelFood = None
 
-    # if there are ghosts active and there are still capsules in the game, act accordingly
+    # If there are ghosts active and there are still capsules in the game, act accordingly
     if len(activeGhosts) > 0 and len(capsules) != 0:
       for cap in capsules:
         actGhos = []
@@ -676,22 +762,22 @@ class OffensiveChock(ReflexChonk):
         if self.getMazeDistance(currentPos, cap) < min(actGhos):
           self.capsules = cap
 
-    # if there are ghosts active and there are still capsules in the game, act accordingly
+    # If there are ghosts active and there are still capsules in the game, act accordingly
     if len(scaredGhosts) > 0 and len(capsules) != 0:
-      for ca in capsules:
+      for cap in capsules:
         scaGhosts = []
         for sG in scaredGhosts:
-          scaGhosts.append(self.getMazeDistance(ca, sG.getPosition()))
-        if self.getMazeDistance(currentPos, ca) >= scaredGhosts[0].scaredTimer and self.getMazeDistance(currentPos, ca) < min(scaGhosts):
-          self.capsules = ca
+          scaGhosts.append(self.getMazeDistance(cap, sG.getPosition()))
+        if self.getMazeDistance(currentPos, cap) >= scaredGhosts[0].scaredTimer and self.getMazeDistance(currentPos, cap) < min(scaGhosts):
+          self.capsules = cap
 
-    # if the current position is in a tunnel, search if there are capsules in the tunnel
+    # If the current position is in a tunnel, search if there are capsules in the tunnel
     if currentPos in tunnels:
-      for c in capsules:
-        if c in getCurrentPosTunnel(currentPos, tunnels):
-          self.capsules = c
+      for cap in capsules:
+        if cap in getCurrentPosTunnel(currentPos, tunnels):
+          self.capsules = cap
 
-    # if there are capsules in the game, get the distances to the capsules
+    # If there are capsules in the game, get the distances to the capsules
     if self.capsules != None:
       features["capsuleDistance"] = self.getMazeDistance(nextPos, self.capsules)
       if nextPos == self.capsules:
@@ -702,7 +788,7 @@ class OffensiveChock(ReflexChonk):
     if len(activeGhosts) == 0 and nextPos in capsules:
       features["leaveCapsule"] = 0.1
 
-    # if the action is stop, set the feature to stop
+    # If the action is stop, set the feature to stop
     if action == Directions.STOP:
       features["stop"] = 1
 
@@ -720,18 +806,18 @@ class OffensiveChock(ReflexChonk):
 
     # When there are scared ghosts, find there mazedinstance.
     if len(scaredGhosts) > 0:
-      disScaredGhost = []
-      for ScaredGhost in scaredGhosts:
-        disScaredGhost.append(self.getMazeDistance(currentPos, ScaredGhost.getPosition()))
+      distScaredGhost = []
+      for scaGhost in scaredGhosts:
+        distScaredGhost.append(self.getMazeDistance(currentPos, scaGhost.getPosition()))
       if emptyTunnel != 0 and emptyTunnel * 2 >= scaredGhosts[0].scaredTimer -1:
         features["wasteAction"] = -1
 
-    # if the agent can't go the safe food, find the best next entrance.
+    # If the agent can't go the safe food, find the best next entrance.
     if self.nextEntry != None and features["goToSafeFood"] == 0:
-      features["goToNextEntrance"] = self.getMazeDistance(nextPos, self.nextEntrance)
+      features["goToNextEntrance"] = self.getMazeDistance(nextPos, self.nextEntry)
 
-    # Checks of there are no active ghosts and if there is food, then only aims to get food most efficient
-    if len(activeGhosts) == 0 and len(currentFood) >- 3:
+    # Checks if there are no active ghosts and if there is food, then only aims to get food most efficient
+    if len(activeGhosts) == 0 and len(currentFood) >= 3:
       nearestFood = []
       for f in currentFood:
         nearestFood.append(self.getMazeDistance(nextPos, f))
@@ -739,12 +825,25 @@ class OffensiveChock(ReflexChonk):
       if nextPos in self.getFood(gameState).asList():
         features["distToSafeFood"] = -1
 
+    # If pacman is in a tunnel and there are ghosts nearby, pacman will either choose to leave or stay in the tunnel
+    if currentPos in tunnels and len(activeGhosts) > 0:
+      foodPos = self.getFoodFromTunnel(gameState)
+      if foodPos == None:
+        features["getOut"] = self.getMazeDistance(nextPosition(currentPos, action), self.tunnelEntry)
+      else:
+        escapeDistance = self.getMazeDistance(successorPos, foodPos) + self.getMazeDistance(foodPos, self.tunnelEntry)
+        ghostDistToEntrance = []
+        for ghost in activeGhosts:
+          ghostDistToEntrance.append(self.getMazeDistance(self.tunnelEntry, ghost.getPosition()))
+        if min(ghostDistToEntrance) - escapeDistance <= 2 and len(scaredGhosts) == 0:
+          features["getOut"] = self.getMazeDistance(nextPosition(currentPos, action), self.tunnelEntry)
+
     return features
 
   # this is a functions that returns the weights
   def getWeights(self, gameState, action):
-    return {"successorScore": 1,"return": -1, "ghostDist": -10, "dead": -1000, "freeRoamFood": -3, "goToSafeFood": -10, "distToSafeFood": -2,
-    "capsuleDistance": -1000, "leaveCapsule": -1,"stop": -50,"noFoodInTunnel": 100,"wasteAction": 100,"goToNextEntrance": -1000}
+    return {"successorScore": 1,"return": -1, "ghostDist": -10, "dead": -1000, "freeRoamFood": -3, "goToSafeFood": -11, "distToSafeFood": -2, "getOut": -1001,
+    "capsuleDistance": -1200, "leaveCapsule": -1,"stop": -50,"noFoodInTunnel": 100,"wasteAction": 100,"goToNextEntrance": -1001}
 
   # This is a functions that returns the distance to Home
   def getHomeDistance(self, gameState):
@@ -788,13 +887,13 @@ class OffensiveChock(ReflexChonk):
 
 class DefensiveChonk(ReflexChonk):
   """
-    This is the defensive agent, it has custom weights and policy's for defensive actions
+  This is the defensive agent, it has custom weights and policy's for defensive actions
   """
   
   def getFeatures(self, gameState, action):
     """
-      This function extracts all needed features from other functions like getFood or getCapsules.
-      It also init lists for the features that aren't given in the right format. And append them to a list.
+    This function extracts all needed features from other functions like getFood or getCapsules.
+    It also init lists for the features that aren't given in the right format. And append them to a list.
     """
     features = util.Counter()
 
@@ -830,31 +929,37 @@ class DefensiveChonk(ReflexChonk):
     if successorState.isPacman: 
       features["defending"] = 0
 
+    # Added feature to go back to own side
     if self.goToEdge == None:
       features["goToEdge"] = self.getEdgeDistance(successor)
 
     if self.getEdgeDistance(successor) <= 2:
       self.goToEdge = 0
 
+    # Try to predict if the enemy will enter a tunnel or is already in one
     if self.invaderGuess:
       self.enemyGuess.lookAround(self, gameState)
       enemyPos = self.enemyGuess.possiblePos(curInvaders[0])
       features["goToTunnel"] = self.getMazeDistance(enemyPos, successorPos)
       self.enemyGuess.guessEnemyPos()
     
+    # Block tunnel if possible so pacman can't escape
     if self.blockTunnel(curInvaders, currentPos, capsules) and currentState.scaredTimer == 0:
       features["goToTunnel"] = self.getMazeDistance(getTunnelEntrance(curInvaders[0].getPosition(), tunnels, legalPositions), successorPos)
       return features
 
+    # Get out of tunnel if there are no enemies 
     if currentPos in defensiveTunnels and len(curInvaders) == 0:
       features["getOutOfTunnel"] = self.getMazeDistance(self.start, successorPos)
 
     features["invaders"] = len(nextInvaders)
 
+    # Roam if there is nothing to do
     if len(curInvaders) == 0 and not successorState.isPacman and currentState.scaredTimer == 0:
       if currentPos not in defensiveTunnels and successorPos in defensiveTunnels:
         features["wastedAction"] = -1
 
+    # Chase pacman if not scared 
     if len(nextInvaders) > 0 and currentState.scaredTimer != 0:
       dist = []
       for inv in nextInvaders:
@@ -863,9 +968,11 @@ class DefensiveChonk(ReflexChonk):
       if currentPos not in defensiveTunnels and successorPos in defensiveTunnels:
         features["wastedAction"] = -1
 
+    # Stop if necessary
     if action == Directions.STOP: 
       features["stop"] = 1
 
+    # Observe and determine if murder is a possiblity 
     if self.getPreviousObservation() != None:
       if len(nextInvaders) == 0 and self.lostFood() != None:
         self.foodEatenByEnemy = self.lostFood()
@@ -876,12 +983,27 @@ class DefensiveChonk(ReflexChonk):
       if successorPos == self.foodEatenByEnemy or len(nextInvaders) > 0:
         self.foodEatenByEnemy = None
 
+    # Protect capsules if necessary 
+    if len(nextInvaders) > 0 and len(capsules) != 0:
+      Dist = []
+      for cap in capsules:
+        Dist.append(self.getMazeDistance(cap, successorPos))
+      features["protectCapsules"] = min(Dist)
+
+    # Go to closest invader 
+    if len(nextInvaders) > 0 and currentState.scaredTimer == 0:
+      dists = []
+      for invader in nextInvaders:
+        dists.append(self.getMazeDistance(successorPos, invader.getPosition()))
+      features["invaderDistance"] = min(dists)
+      features["distToEdge"] = self.getEdgeDistance(successor)
+
     return features
 
   # Return the weights for the agent
   def getWeights(self, gameState, action):
-    return {"defending": 10, "goToEdge": -2, "goToTunnel": -10, "getOutOfTunnel": -0.1,
-    "Invaders": -100, "wastedAction": 200,  "chase": -100, "stop": -100, "murder": -1}
+    return {"defending": 10, "goToEdge": -2, "goToTunnel": -10, "getOutOfTunnel": -0.1, "protectCapsules": -3, "invaderDistance": -10,
+    "Invaders": -100, "wastedAction": 200,  "chase": -100, "stop": -100, "murder": -1, "distToEdge": -3}
 
   # Get the distance from you to the middle of the matrix
   def getEdgeDistance(self, gameState):
@@ -929,8 +1051,8 @@ class DefensiveChonk(ReflexChonk):
       invaderPos = curInvaders[0].getPosition()
       if invaderPos in tunnels:
         tunnelEntrance = getTunnelEntrance(invaderPos, tunnels, legalPositions)
-        if self.getMazeDistance(tunnelEntrance, currentPos) <= self.getMazeDistance(tunnelEntrance, invaderPos):
-          if curCapsule not in getCurrentPosTunnel(invaderPos, tunnels):
+        if self.getMazeDistance(tunnelEntrance, currentPos) <= self.getMazeDistance(tunnelEntrance, invaderPos) \
+          and curCapsule not in getCurrentPosTunnel(invaderPos, tunnels):
             return None
     return False
 
