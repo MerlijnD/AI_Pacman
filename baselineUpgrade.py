@@ -655,12 +655,12 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     if not gameState.getAgentState(self.index).isPacman:
         self.carriedDot = 0
 
+#!!!!!!!!!!!!!!!!!!!!!!!!
     # if left time just for coming back, add this feature to force agent coming back
     if self.getTimeLeft(gameState)/4 < self.getLengthToHome(gameState) + 3: 
         features['distToHome'] = self.getLengthToHome(successor)
         return features
 
-#!!!!!!!!!!!!!!!!!!!!!
     # When no ghost nearby, the distance between Pacman with nearest food
     if len(activeGhost) == 0 and len(currentFoodList) != 0 and len(currentFoodList) >= 3:            
       features['safeFoodDist'] = min([self.getMazeDistance(myPos, food) for food in currentFoodList])
@@ -781,7 +781,6 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
          if checkTunnel != 0 and checkTunnel*2 >= scaredGhost[0].scaredTimer -1:
              features['wasteAction'] = -1
 
-#!!!!!!!!!!!!!!!!!!!!!
     # When Pacman in a tunnel and suddenly ghost found nearby, Pacman will judge when it 
     # should leave this tunnel
     if curPos in tunnels and len(activeGhost) > 0:
@@ -794,6 +793,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
             if ghostToEntry - lengthToEscape <= 1 and len(scaredGhost) == 0:
                 features['escapeTunnel'] = self.getMazeDistance(nextPos(curPos,action), self.tunnelEntry)
 
+#!!!!!!!!!!!!!!!!!!1
     if curPos in tunnels and len(scaredGhost) > 0:
         foodPos = self.getTunnelFood(gameState)
         if foodPos == None:
@@ -913,7 +913,6 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         if  curPos not in defensiveTunnels and successor.getAgentState(self.index).getPosition() in defensiveTunnels: 
             features['wasteAction'] = -1
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!1
     # features['invaderDistance']: The distance between my ghost with the nearest invader
     # features['lengthToBoundary']: length to the nearest boundary position
     # This feature will appear when ghost chasing the Pacman, to ensure ghost 
@@ -931,7 +930,6 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
             # This feature forces the ghost does not go into a tunnel when no invader found
             features['wasteAction'] = -1
 
-#!!!!!!!!!!!!!!!!!!!!!!
     # Distance between agent and capsule, if there are invaders nearby
     if len(invaders) > 0 and len(curCapsule) != 0:         
         dist2 = [self.getMazeDistance(c, sucPos) for c in curCapsule]
